@@ -11,19 +11,22 @@ public class AlmostConstantAscertainmentTreeLikelihoodTest extends TestCase {
 
 	@Test
 	public void testBinaryCase() throws XMLParserException {
-		// Start likelihood: -13.563960708066837 
 		String xml = "<beast namespace='beast.core:beast.evolution.alignment:beast.evolution.tree.coalescent:beast.core.util:beast.evolution.nuc:beast.evolution.operators:beast.evolution.sitemodel:beast.evolution.substitutionmodel:beast.evolution.likelihood' version='2.4'>\n" + 
 				"\n" + 
 				"<data id='test' dataType='binary'>\n" + 
-				"    <sequence id='seq_0' taxon='A' totalcount='2' value='01000'/>\n" + 
-				"    <sequence id='seq_1' taxon='B' totalcount='2' value='00100'/>\n" + 
-				"    <sequence id='seq_2' taxon='C' totalcount='2' value='00010'/>\n" + 
-				"    <sequence id='seq_3' taxon='D' totalcount='2' value='00001'/>\n" + 
+				"    <sequence id='seq_0' taxon='A' totalcount='2' value='1010000111'/>\n" + 
+				"    <sequence id='seq_1' taxon='B' totalcount='2' value='1001001011'/>\n" + 
+				"    <sequence id='seq_2' taxon='C' totalcount='2' value='1000101101'/>\n" + 
+				"    <sequence id='seq_3' taxon='D' totalcount='2' value='1000011110'/>\n" + 
+//				"    <sequence id='seq_0' taxon='A' totalcount='2' value='10'/>\n" + 
+//				"    <sequence id='seq_1' taxon='B' totalcount='2' value='10'/>\n" + 
+//				"    <sequence id='seq_2' taxon='C' totalcount='2' value='10'/>\n" + 
+//				"    <sequence id='seq_3' taxon='D' totalcount='2' value='10'/>\n" + 
 				"</data>\n" + 
 				"\n" + 
 				"<run id='mcmc' spec='MCMC' chainLength='1'>\n" + 
 				"    <state id='state' storeEvery='5000'>\n" + 
-				"	    <tree name='stateNode' id='Tree.t:tree' IsLabelledNewick='true' spec='beast.util.TreeParser' newick='((A:0.25,B:0.25):0.25,(C:0.25,D:0.25):0.25);'>\n" + 
+				"	    <tree name='stateNode' id='Tree.t:tree' IsLabelledNewick='true' spec='beast.util.TreeParser' newick='((A:0.25,B:0.25):0.25,(C:0.2,D:0.2):0.3);'>\n" + 
 				"            <taxa idref='test'/>\n" + 
 				"        </tree>\n" + 
 				"    </state>\n" + 
@@ -48,19 +51,40 @@ public class AlmostConstantAscertainmentTreeLikelihoodTest extends TestCase {
 				"\n" + 
 				"</beast>\n"; 
 		XMLParser parser = new XMLParser();
+		System.setProperty("java.only", "true");
 		MCMC mcmc = (MCMC) parser.parseFragment(xml, true);
-		GenericTreeLikelihood treelikelihood = (GenericTreeLikelihood) mcmc.posteriorInput.get();
-		double trueP = mcmc.robustlyCalcPosterior(treelikelihood);
+		TreeLikelihood treelikelihood = (TreeLikelihood) mcmc.posteriorInput.get();
+		mcmc.robustlyCalcPosterior(treelikelihood);
+		double [] p = treelikelihood.patternLogLikelihoods;
+		double trueP = 0;
+		for (double d : p) {
+			trueP += Math.exp(d);
+		}
+		trueP = Math.log(trueP);
 		
-		AlmostConstantAscertainedTreeLikelihood acaLikelihood = new AlmostConstantAscertainedTreeLikelihood();
-		acaLikelihood.initByName("treelikelihood", treelikelihood, "maxDeviation", 1, 
-				"data", treelikelihood.dataInput.get(), "tree", treelikelihood.treeInput.get(), 
-				"siteModel", treelikelihood.siteModelInput.get(),
-				"branchRateModel", treelikelihood.branchRateModelInput.get());
-		acaLikelihood.requiresRecalculation();
-		acaLikelihood.calculateLogP();
-		double aca = acaLikelihood.calcAscertainmentCorrection();
-		assertEquals(trueP, aca, 1e-10);
+		{   // constant sites only
+			AlmostConstantAscertainedTreeLikelihood acaLikelihood = new AlmostConstantAscertainedTreeLikelihood();
+			acaLikelihood.initByName("treelikelihood", treelikelihood, "maxDeviation", 0, 
+					"data", treelikelihood.dataInput.get(), "tree", treelikelihood.treeInput.get(), 
+					"siteModel", treelikelihood.siteModelInput.get(),
+					"branchRateModel", treelikelihood.branchRateModelInput.get());
+			acaLikelihood.requiresRecalculation();
+			acaLikelihood.calculateLogP();
+			double aca = acaLikelihood.calcAscertainmentCorrection();
+			assertEquals(-1.1536566517135067, aca, 1e-10);
+		}
+		
+		{   // constant sites + singletons
+			AlmostConstantAscertainedTreeLikelihood acaLikelihood = new AlmostConstantAscertainedTreeLikelihood();
+			acaLikelihood.initByName("treelikelihood", treelikelihood, "maxDeviation", 1, 
+					"data", treelikelihood.dataInput.get(), "tree", treelikelihood.treeInput.get(), 
+					"siteModel", treelikelihood.siteModelInput.get(),
+					"branchRateModel", treelikelihood.branchRateModelInput.get());
+			acaLikelihood.requiresRecalculation();
+			acaLikelihood.calculateLogP();
+			double aca = acaLikelihood.calcAscertainmentCorrection();
+			assertEquals(-0.31083933173222555, aca, 1e-10);
+		}
 	}
 
 	@Test

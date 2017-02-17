@@ -211,10 +211,10 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
 
 
         for (int d = 0; d < maxDeviationPlusOne; d++) {
-        	int u = d * nrOfStates * nrOfMatrices;
-        	for (int k = 0; k < d; k++) {
-                int v1 = k * nrOfStates * nrOfMatrices;
-                int v2 = (d-k) * nrOfStates * nrOfMatrices;
+        	for (int k = 0; k < maxDeviationPlusOne - d; k++) {
+            	int u = (k + d) * nrOfStates * nrOfMatrices;
+                int v1 = d * nrOfStates * nrOfMatrices;
+                int v2 = k * nrOfStates * nrOfMatrices;
 		        for (int l = 0; l < nrOfMatrices; l++) {
 		
 	//	            for (int k = 0; k < nrOfPatterns; k++) {
@@ -255,7 +255,7 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
 
         int u = 0;
         int v = 0;
-        for (int k = 0; k < nrOfPatterns; k++) {
+        for (int k = 0; k < maxDeviationPlusOne; k++) {
 
             for (int i = 0; i < nrOfStates; i++) {
 
@@ -269,7 +269,7 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
         for (int l = 1; l < nrOfMatrices; l++) {
             u = 0;
 
-            for (int k = 0; k < nrOfPatterns; k++) {
+            for (int k = 0; k < maxDeviationPlusOne; k++) {
 
                 for (int i = 0; i < nrOfStates; i++) {
 
@@ -291,7 +291,6 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
     @Override
 	public void calculateLogLikelihoods(double[] partials, double[] frequencies, double[] outLogLikelihoods) {
         int v = 0;
-        outLogLikelihoods[0] = 0;
 //        for (int k = 0; k < nrOfPatterns; k++) {
         for (int d = 0; d < maxDeviationPlusOne; d++) {
 
@@ -301,7 +300,7 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
                 sum += frequencies[i] * partials[v];
                 v++;
             }
-            outLogLikelihoods[0] += Math.log(sum) + getLogScalingFactor(d);
+            outLogLikelihoods[d] = Math.log(sum) + getLogScalingFactor(d);
         }
     }
 
