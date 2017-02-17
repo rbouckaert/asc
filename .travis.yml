@@ -1,2 +1,8 @@
 language: java
-install: ant
+
+jdk:
+  - oraclejdk8
+
+#sudo: false
+sudo: required
+dist: trusty
