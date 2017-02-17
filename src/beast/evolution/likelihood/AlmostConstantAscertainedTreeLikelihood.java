@@ -9,6 +9,8 @@ import beast.core.util.Log;
 import beast.evolution.tree.Node;
 import beast.evolution.tree.Tree;
 
+//TODO: deal with missing data
+
 @Description("Tree likelihood that ascertains for sites being almost-constant, that is, constant or deviate from constant on at most "
 		+ "k sites (where k can be specified to be a number between 0 and at most half the number of taxa).")
 public class AlmostConstantAscertainedTreeLikelihood extends TreeLikelihood {
@@ -33,18 +35,27 @@ public class AlmostConstantAscertainedTreeLikelihood extends TreeLikelihood {
 			throw new IllegalArgumentException("maxDeviation should be smaller than half the number of taxa in the tree");
 		}
 
+		stateCount = dataInput.get().getMaxStateCount();
+		m_fAscRootPartials = new double[stateCount][(stateCount) * (baseInput.get() + 1)];
+		ascPatternLogLikelihoods = new double[stateCount][1];
+		treelikelihood = treeLikelihoodInput.get();
+
+		boolean org = !Boolean.valueOf(System.getProperty("java.only")); 
+		if (org) {
+        	System.setProperty("java.only", "true");
+        }
+
 		super.initAndValidate();
+		
+		if (org) {
+        	System.setProperty("java.only", "false");
+        }
 		
 		if (useAscertainedSitePatterns) {
 			Log.warning("WARNING: Using both ascertained patterns and ascertainment on almst-constant sites. "
 					+ "If these overlap, the likelihood calculation can be incorrect.");
 		}
 
-		stateCount = dataInput.get().getMaxStateCount();
-		m_fAscRootPartials = new double[stateCount][baseInput.get()];
-		ascPatternLogLikelihoods = new double[stateCount][1];
-		
-		treelikelihood = treeLikelihoodInput.get();
 	}
 
 	@Override
@@ -62,13 +73,21 @@ public class AlmostConstantAscertainedTreeLikelihood extends TreeLikelihood {
 	        );
 		}
         setStates(treeInput.get().getRoot());
+        hasDirt = Tree.IS_FILTHY;
+        final int extNodeCount = nodeCount / 2 + 1;
+        final int intNodeCount = nodeCount / 2;
+        for (int i = 0; i < intNodeCount; i++) {
+    		for (int k = 0; k < stateCount; k++) {
+    			ascertainmentCore[k].createNodePartials(extNodeCount + i);
+    		}
+        }
 	}
 	
 	protected void setStates(Node node) {
         if (node.isLeaf()) {
             int[] states = new int[1];
             for (int i = 0; i < stateCount; i++) {
-            	states[0] = i;
+            	states[0] = 0;
                 ascertainmentCore[i].setNodeStates(node.getNr(), states);
             }
         } else {
@@ -204,7 +223,7 @@ public class AlmostConstantAscertainedTreeLikelihood extends TreeLikelihood {
         }
         collapsed[1] = p;
         collapsed[0] = 1.0 - collapsed[1];
-        return null;
+        return collapsed;
 	}
 
 	private double[] collapseFreqs(double[] frequencies, int k) {
@@ -214,7 +233,7 @@ public class AlmostConstantAscertainedTreeLikelihood extends TreeLikelihood {
 		return collapsed;
 	}
 
-	private double calcAscertainmentCorrection() {
+	double calcAscertainmentCorrection() {
 		double p = 0;
 		for (int i = 0; i < stateCount; i++) {
 			p += ascPatternLogLikelihoods[i][0];

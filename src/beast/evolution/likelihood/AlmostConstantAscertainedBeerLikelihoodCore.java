@@ -2,12 +2,14 @@ package beast.evolution.likelihood;
 
 import java.util.Arrays;
 
+// TODO: deal with missing data
+
 /**
  * standard likelihood core, uses no caching *
  */
 public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore {
     protected int nrOfStates;
-    protected int maxDeviation; // max nr of taxa deviating from being constant
+    protected int maxDeviationPlusOne; // max nr of taxa deviating from being constant
     protected int nrOfNodes;
     protected int nrOfPatterns;
     protected int partialsSize;
@@ -36,7 +38,7 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
 
     public AlmostConstantAscertainedBeerLikelihoodCore(int nrOfStates, int maxDeviation) {
         this.nrOfStates = nrOfStates;
-        this.maxDeviation = maxDeviation;
+        this.maxDeviationPlusOne = maxDeviation + 1;
     } // c'tor
 
 
@@ -52,7 +54,7 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
         int state2 = 0;
         int offset = 0;
         updateStateState(state1, state2, offset, matrices1, matrices2, partials3);
-        if (maxDeviation > 0) {
+        if (maxDeviationPlusOne > 1) {
             offset = 1 * nrOfStates * nrOfMatrices;
             state1 = 1;
             state2 = 0;
@@ -61,7 +63,7 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
             state2 = 1;
             updateStateState(state1, state2, offset, matrices1, matrices2, partials3);
         }
-        if (maxDeviation > 1) {
+        if (maxDeviationPlusOne > 2) {
             offset = 2 * nrOfStates * nrOfMatrices;
             state1 = 1;
             state2 = 1;
@@ -129,13 +131,13 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
                                                   double[] partials2, double[] matrices2,
                                                   double[] partials3) {
         Arrays.fill(partials3, 0);
-    	for (int d2 = 0; d2 < maxDeviation; d2++) {
+    	for (int d2 = 0; d2 < maxDeviationPlusOne; d2++) {
         	int offset = d2 * nrOfStates * nrOfMatrices;
     		int partial2offset = d2 * nrOfStates * nrOfMatrices;
     		updateStatePartials(0, offset, partial2offset, matrices1,
                     partials2, matrices2, partials3);
     	}
-    	for (int d2 = 0; d2 < maxDeviation - 1; d2++) {
+    	for (int d2 = 0; d2 < maxDeviationPlusOne - 1; d2++) {
         	int offset = (d2 + 1) * nrOfStates * nrOfMatrices;
     		int partial2offset = d2 * nrOfStates * nrOfMatrices;
     		updateStatePartials(1, offset, partial2offset, matrices1,
@@ -208,7 +210,7 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
         double sum1, sum2;
 
 
-        for (int d = 0; d < maxDeviation; d++) {
+        for (int d = 0; d < maxDeviationPlusOne; d++) {
         	int u = d * nrOfStates * nrOfMatrices;
         	for (int k = 0; k < d; k++) {
                 int v1 = k * nrOfStates * nrOfMatrices;
@@ -291,7 +293,7 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
         int v = 0;
         outLogLikelihoods[0] = 0;
 //        for (int k = 0; k < nrOfPatterns; k++) {
-        for (int d = 0; d < maxDeviation; d++) {
+        for (int d = 0; d < maxDeviationPlusOne; d++) {
 
             double sum = 0.0;
             for (int i = 0; i < nrOfStates; i++) {
@@ -322,9 +324,9 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
         this.integrateCategories = integrateCategories;
 
         if (integrateCategories) {
-            partialsSize = patternCount * nrOfStates * matrixCount * maxDeviation;
+            partialsSize = patternCount * nrOfStates * matrixCount * maxDeviationPlusOne;
         } else {
-            partialsSize = patternCount * nrOfStates * maxDeviation;
+            partialsSize = patternCount * nrOfStates * maxDeviationPlusOne;
         }
 
         partials = new double[2][nodeCount][];
