@@ -36,7 +36,7 @@ public class AlmostConstantAscertainedTreeLikelihood extends TreeLikelihood {
 		}
 
 		stateCount = dataInput.get().getMaxStateCount();
-		m_fAscRootPartials = new double[stateCount][(2) * (baseInput.get() + 1)];
+		m_fAscRootPartials = new double[stateCount][(stateCount) * (baseInput.get() + 1)];
 		ascPatternLogLikelihoods = new double[stateCount][baseInput.get() + 1];
 		treelikelihood = treeLikelihoodInput.get();
 
@@ -64,7 +64,7 @@ public class AlmostConstantAscertainedTreeLikelihood extends TreeLikelihood {
 		ascertainmentCore = new AlmostConstantAscertainedBeerLikelihoodCore[stateCount];
         final int nodeCount = treeInput.get().getNodeCount();
 		for (int i = 0; i < stateCount; i++) {
-			ascertainmentCore[i] = new AlmostConstantAscertainedBeerLikelihoodCore(2, baseInput.get());
+			ascertainmentCore[i] = new AlmostConstantAscertainedBeerLikelihoodCore(stateCount, baseInput.get(), i);
 	        ascertainmentCore[i].initialize(
 	                nodeCount,
 	                1,
@@ -136,7 +136,7 @@ public class AlmostConstantAscertainedTreeLikelihood extends TreeLikelihood {
                 //likelihoodCore.setNodeMatrix(nodeIndex, i, probabilities);
                 
                 for (int k = 0; k < stateCount; k++) {
-                	ascertainmentCore[k].setNodeMatrix(nodeIndex, i, collapseTransProbs(probabilities, k));
+                	ascertainmentCore[k].setNodeMatrix(nodeIndex, i, probabilities);
                 }
             }
             update |= Tree.IS_DIRTY;
@@ -202,7 +202,7 @@ public class AlmostConstantAscertainedTreeLikelihood extends TreeLikelihood {
 
                     //likelihoodCore.calculateLogLikelihoods(m_fRootPartials, frequencies, patternLogLikelihoods);
                     for (int k = 0; k < stateCount; k++) {
-                    	ascertainmentCore[k].calculateLogLikelihoods(m_fAscRootPartials[k], collapseFreqs(frequencies, k), ascPatternLogLikelihoods[k]);
+                    	ascertainmentCore[k].calculateLogLikelihoods(m_fAscRootPartials[k], frequencies, ascPatternLogLikelihoods[k]);
                     }
                 }
 
@@ -211,27 +211,27 @@ public class AlmostConstantAscertainedTreeLikelihood extends TreeLikelihood {
         return update;
     } // traverse
     
-	private double[] collapseTransProbs(double[] probabilities, int k) {
-		double [] collapsed = new double[4];
-        Arrays.fill(collapsed, 1.0);
-        collapsed[0] = probabilities[k * stateCount + k];
-        collapsed[1] = 1.0 - collapsed[0];
-        double p = -collapsed[0];
-        for (int i = 0; i < stateCount; i++) {
-        	p += probabilities[i*stateCount + k];
-        }
-        collapsed[2] = p;
-        collapsed[3] = 1.0 - p;
-        return collapsed;
-	}
-
-	private double[] collapseFreqs(double[] frequencies, int k) {
-		double [] collapsed = new double[2];
-		collapsed[0] = frequencies[k];
-		collapsed[1] = 1.0 - frequencies[k];
-		return collapsed;
-	}
-
+//	private double[] collapseTransProbs(double[] probabilities, int k) {
+//		double [] collapsed = new double[4];
+//        Arrays.fill(collapsed, 1.0);
+//        collapsed[0] = probabilities[k * stateCount + k];
+//        collapsed[1] = 1.0 - collapsed[0];
+//        double p = -collapsed[0];
+//        for (int i = 0; i < stateCount; i++) {
+//        	p += probabilities[i*stateCount + k];
+//        }
+//        collapsed[2] = p;
+//        collapsed[3] = 1.0 - p;
+//        return collapsed;
+//	}
+//
+//	private double[] collapseFreqs(double[] frequencies, int k) {
+//		double [] collapsed = new double[2];
+//		collapsed[0] = frequencies[k];
+//		collapsed[1] = 1.0 - frequencies[k];
+//		return collapsed;
+//	}
+//
 	double calcAscertainmentCorrection() {
 		final double maxDeviationPlusOne = baseInput.get() + 1;
 		double max = ascPatternLogLikelihoods[0][0];

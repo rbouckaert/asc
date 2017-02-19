@@ -10,6 +10,7 @@ import java.util.Arrays;
 public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore {
     protected int nrOfStates;
     protected int maxDeviationPlusOne; // max nr of taxa deviating from being constant
+    protected int base;
     protected int nrOfNodes;
     protected int nrOfPatterns;
     protected int partialsSize;
@@ -36,9 +37,10 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
     private double scalingThreshold = 1.0E-100;
     double SCALE = 2;
 
-    public AlmostConstantAscertainedBeerLikelihoodCore(int nrOfStates, int maxDeviation) {
+    public AlmostConstantAscertainedBeerLikelihoodCore(int nrOfStates, int maxDeviation, int base) {
         this.nrOfStates = nrOfStates;
         this.maxDeviationPlusOne = maxDeviation + 1;
+        this.base = base;
     } // c'tor
 
 
@@ -50,24 +52,36 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
                                                 double[] partials3) {
         Arrays.fill(partials3, 0);
 
-        int state1 = 0;
-        int state2 = 0;
+        int state1 = base;
+        int state2 = base;
         int offset = 0;
         updateStateState(state1, state2, offset, matrices1, matrices2, partials3);
         if (maxDeviationPlusOne > 1) {
             offset = 1 * nrOfStates * nrOfMatrices;
-            state1 = 1;
-            state2 = 0;
-            updateStateState(state1, state2, offset, matrices1, matrices2, partials3);
-            state1 = 0;
-            state2 = 1;
-            updateStateState(state1, state2, offset, matrices1, matrices2, partials3);
+            for (int i = 0; i < nrOfStates; i++) {
+            	if (i != base) {
+                    state1 = i;
+                    state2 = base;
+                    updateStateState(state1, state2, offset, matrices1, matrices2, partials3);
+                    state1 = base;
+                    state2 = i;
+                    updateStateState(state1, state2, offset, matrices1, matrices2, partials3);
+            	}
+            }
         }
         if (maxDeviationPlusOne > 2) {
             offset = 2 * nrOfStates * nrOfMatrices;
-            state1 = 1;
-            state2 = 1;
-            updateStateState(state1, state2, offset, matrices1, matrices2, partials3);
+            for (int i = 0; i < nrOfStates; i++) {
+            	if (i != base) {
+                    for (int j = 0; j < nrOfStates; j++) {
+                    	if (j != base) {
+				            state1 = i;
+				            state2 = j;
+				            updateStateState(state1, state2, offset, matrices1, matrices2, partials3);
+                    	}
+                    }
+            	}
+            }
         }
     }
     
