@@ -2,7 +2,7 @@ package beast.evolution.likelihood;
 
 import java.util.Arrays;
 
-// TODO: deal with missing data
+// TODO: deal with ambiguous data
 
 /**
  * standard likelihood core, uses no caching *
@@ -52,36 +52,64 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
                                                 double[] partials3) {
         Arrays.fill(partials3, 0);
 
-        int state1 = base;
-        int state2 = base;
-        int offset = 0;
-        updateStateState(state1, state2, offset, matrices1, matrices2, partials3);
-        if (maxDeviationPlusOne > 1) {
-            offset = 1 * nrOfStates * nrOfMatrices;
-            for (int i = 0; i < nrOfStates; i++) {
-            	if (i != base) {
-                    state1 = i;
-                    state2 = base;
-                    updateStateState(state1, state2, offset, matrices1, matrices2, partials3);
-                    state1 = base;
-                    state2 = i;
-                    updateStateState(state1, state2, offset, matrices1, matrices2, partials3);
-            	}
-            }
-        }
-        if (maxDeviationPlusOne > 2) {
-            offset = 2 * nrOfStates * nrOfMatrices;
-            for (int i = 0; i < nrOfStates; i++) {
-            	if (i != base) {
-                    for (int j = 0; j < nrOfStates; j++) {
-                    	if (j != base) {
-				            state1 = i;
-				            state2 = j;
-				            updateStateState(state1, state2, offset, matrices1, matrices2, partials3);
-                    	}
-                    }
-            	}
-            }
+        if (stateIndex1[0] < nrOfStates && stateIndex2[0] < nrOfStates) {
+	        int state1 = base;
+	        int state2 = base;
+	        int offset = 0;
+	        updateStateState(state1, state2, offset, matrices1, matrices2, partials3);
+	        if (maxDeviationPlusOne > 1) {
+	            offset = 1 * nrOfStates * nrOfMatrices;
+	            for (int i = 0; i < nrOfStates; i++) {
+	            	if (i != base) {
+	                    state1 = i;
+	                    state2 = base;
+	                    updateStateState(state1, state2, offset, matrices1, matrices2, partials3);
+	                    state1 = base;
+	                    state2 = i;
+	                    updateStateState(state1, state2, offset, matrices1, matrices2, partials3);
+	            	}
+	            }
+	        }
+	        if (maxDeviationPlusOne > 2) {
+	            offset = 2 * nrOfStates * nrOfMatrices;
+	            for (int i = 0; i < nrOfStates; i++) {
+	            	if (i != base) {
+	                    for (int j = 0; j < nrOfStates; j++) {
+	                    	if (j != base) {
+					            state1 = i;
+					            state2 = j;
+					            updateStateState(state1, state2, offset, matrices1, matrices2, partials3);
+	                    	}
+	                    }
+	            	}
+	            }
+	        }
+        } else if (stateIndex1[0] < nrOfStates) {
+            // child 2 has a gap or unknown state so treat it as unknown
+	        updateStateState(base, nrOfStates, 0, matrices1, matrices2, partials3);
+	        if (maxDeviationPlusOne > 1) {
+	            int offset = 1 * nrOfStates * nrOfMatrices;
+	            for (int i = 0; i < nrOfStates; i++) {
+	            	if (i != base) {
+	                    updateStateState(i, nrOfStates, offset, matrices1, matrices2, partials3);
+	            	}
+	            }
+	        }
+        } else if (stateIndex2[0] < nrOfStates) {
+            // child 1 has a gap or unknown state so treat it as unknown
+	        updateStateState(nrOfStates, base, 0, matrices1, matrices2, partials3);
+	        if (maxDeviationPlusOne > 1) {
+	            int offset = 1 * nrOfStates * nrOfMatrices;
+	            for (int i = 0; i < nrOfStates; i++) {
+	            	if (i != base) {
+	                    updateStateState(nrOfStates, i, offset, matrices1, matrices2, partials3);
+	            	}
+	            }
+	        }
+
+        } else {
+            // both children have a gap or unknown state so set partials to 1
+        	updateStateState(nrOfStates, nrOfStates, 0, matrices1, matrices2, partials3);
         }
     }
     
@@ -95,23 +123,22 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
 
 
                 int w = l * matrixSize;
-                for (int i = 0; i < nrOfStates; i++) {
-
-                    partials3[v] += matrices1[w + state1] * matrices2[w + state2];
-
-                    v++;
-                    w += nrOfStates;
-                }
 
                 if (state1 < nrOfStates && state2 < nrOfStates) {
+                    for (int i = 0; i < nrOfStates; i++) {
 
+                        partials3[v] += matrices1[w + state1] * matrices2[w + state2];
+
+                        v++;
+                        w += nrOfStates;
+                    }
 
                 } else if (state1 < nrOfStates) {
                     // child 2 has a gap or unknown state so treat it as unknown
 
                     for (int i = 0; i < nrOfStates; i++) {
 
-                        partials3[v] = matrices1[w + state1];
+                        partials3[v] += matrices1[w + state1];
 
                         v++;
                         w += nrOfStates;
@@ -121,7 +148,7 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
 
                     for (int i = 0; i < nrOfStates; i++) {
 
-                        partials3[v] = matrices2[w + state2];
+                        partials3[v] += matrices2[w + state2];
 
                         v++;
                         w += nrOfStates;
@@ -145,21 +172,32 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
                                                   double[] partials2, double[] matrices2,
                                                   double[] partials3) {
         Arrays.fill(partials3, 0);
-    	for (int d2 = 0; d2 < maxDeviationPlusOne; d2++) {
-        	int offset = d2 * nrOfStates * nrOfMatrices;
-    		int partial2offset = d2 * nrOfStates * nrOfMatrices;
-    		updateStatePartials(base, offset, partial2offset, matrices1,
-                    partials2, matrices2, partials3);
-    	}
-    	for (int d2 = 0; d2 < maxDeviationPlusOne - 1; d2++) {
-        	int offset = (d2 + 1) * nrOfStates * nrOfMatrices;
-    		int partial2offset = d2 * nrOfStates * nrOfMatrices;
-    		for (int i = 0; i < nrOfStates; i++) {
-    			if (i != base) {
-    	    		updateStatePartials(i, offset, partial2offset, matrices1,
-    	                    partials2, matrices2, partials3);
-    			}
-    		}
+
+        if (stateIndex1[0] < nrOfStates) {
+        	for (int d2 = 0; d2 < maxDeviationPlusOne; d2++) {
+	        	int offset = d2 * nrOfStates * nrOfMatrices;
+	    		int partial2offset = d2 * nrOfStates * nrOfMatrices;
+	    		updateStatePartials(base, offset, partial2offset, matrices1,
+	                    partials2, matrices2, partials3);
+	    	}
+	    	for (int d2 = 0; d2 < maxDeviationPlusOne - 1; d2++) {
+	        	int offset = (d2 + 1) * nrOfStates * nrOfMatrices;
+	    		int partial2offset = d2 * nrOfStates * nrOfMatrices;
+	    		for (int i = 0; i < nrOfStates; i++) {
+	    			if (i != base) {
+	    	    		updateStatePartials(i, offset, partial2offset, matrices1,
+	    	                    partials2, matrices2, partials3);
+	    			}
+	    		}
+	    	}
+    	} else {
+    		// child 1 has a gap or unknown state so treat it as unknown
+        	for (int d2 = 0; d2 < maxDeviationPlusOne; d2++) {
+	        	int offset = d2 * nrOfStates * nrOfMatrices;
+	    		int partial2offset = d2 * nrOfStates * nrOfMatrices;
+	    		updateStatePartials(nrOfStates, offset, partial2offset, matrices1,
+	                    partials2, matrices2, partials3);
+	    	}
     	}
     }
     
@@ -207,7 +245,7 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
                             w++;
                         }
 
-                        partials3[u] = sum;
+                        partials3[u] += sum;
                         u++;
                     }
 

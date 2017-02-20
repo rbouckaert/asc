@@ -1,18 +1,19 @@
 package beast.evolution.likelihood;
 
-import java.util.Arrays;
 
 import beast.core.Description;
 import beast.core.Input;
 import beast.core.Input.Validate;
 import beast.core.util.Log;
+import beast.evolution.alignment.Alignment;
 import beast.evolution.tree.Node;
 import beast.evolution.tree.Tree;
 
-//TODO: deal with missing data
+//TODO: deal with ambiguous data
 
 @Description("Tree likelihood that ascertains for sites being almost-constant, that is, constant or deviate from constant on at most "
-		+ "k sites (where k can be specified to be a number between 0 and at most half the number of taxa).")
+		+ "k sites (where k can be specified to be a number between 0 and at most half the number of taxa). "
+		+ "Deals with missing data.")
 public class AlmostConstantAscertainedTreeLikelihood extends TreeLikelihood {
 	public Input<Integer> baseInput = new Input<>("maxDeviation", "ascertains on all sites that are constants or "
 			+ "have at most 'maxDeviation' deviations from constant sites. maxDeviation must be a positive "
@@ -85,9 +86,18 @@ public class AlmostConstantAscertainedTreeLikelihood extends TreeLikelihood {
 	
 	protected void setStates(Node node) {
         if (node.isLeaf()) {
+            Alignment data = dataInput.get();
             int[] states = new int[1];
+            
+            int taxonIndex = getTaxonIndex(node.getID(), data);
+            int code = data.getPattern(taxonIndex, 0);
+            int [] statesForCode = data.getDataType().getStatesForCode(code);
+            if (statesForCode.length==1) {
+                states[0] = statesForCode[0];
+            } else {
+                states[0] = code; // Causes ambiguous states to be ignored.
+            }
             for (int i = 0; i < stateCount; i++) {
-            	states[0] = 0;
                 ascertainmentCore[i].setNodeStates(node.getNr(), states);
             }
         } else {
@@ -97,6 +107,19 @@ public class AlmostConstantAscertainedTreeLikelihood extends TreeLikelihood {
     }
 
 	
+    private int getTaxonIndex(String taxon, Alignment data) {
+        int taxonIndex = data.getTaxonIndex(taxon);
+        if (taxonIndex == -1) {
+        	if (taxon.startsWith("'") || taxon.startsWith("\"")) {
+                taxonIndex = data.getTaxonIndex(taxon.substring(1, taxon.length() - 1));
+            }
+            if (taxonIndex == -1) {
+            	throw new RuntimeException("Could not find sequence " + taxon + " in the alignment");
+            }
+        }
+        return taxonIndex;
+	}
+
 	@Override
     void calcLogP() {
         logP = treelikelihood.getCurrentLogP();
