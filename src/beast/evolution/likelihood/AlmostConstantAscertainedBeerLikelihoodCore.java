@@ -148,14 +148,18 @@ public class AlmostConstantAscertainedBeerLikelihoodCore extends LikelihoodCore 
     	for (int d2 = 0; d2 < maxDeviationPlusOne; d2++) {
         	int offset = d2 * nrOfStates * nrOfMatrices;
     		int partial2offset = d2 * nrOfStates * nrOfMatrices;
-    		updateStatePartials(0, offset, partial2offset, matrices1,
+    		updateStatePartials(base, offset, partial2offset, matrices1,
                     partials2, matrices2, partials3);
     	}
     	for (int d2 = 0; d2 < maxDeviationPlusOne - 1; d2++) {
         	int offset = (d2 + 1) * nrOfStates * nrOfMatrices;
     		int partial2offset = d2 * nrOfStates * nrOfMatrices;
-    		updateStatePartials(1, offset, partial2offset, matrices1,
-                    partials2, matrices2, partials3);
+    		for (int i = 0; i < nrOfStates; i++) {
+    			if (i != base) {
+    	    		updateStatePartials(i, offset, partial2offset, matrices1,
+    	                    partials2, matrices2, partials3);
+    			}
+    		}
     	}
     }
     
